@@ -167,43 +167,24 @@ A3 )   create view v3 as
         
 Q4) Display details of shipment data (Month, Day YYYY), sender and receiver name whose package weight is between 5 and 10
 
-A4)   create view v41 as
-		
-			create view v41 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as sender_name
-			-> from tbl_shipment
-			-> JOIN tbl_package
-			-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
-			-> JOIN tbl_client
-			-> ON tbl_client.account_number = tbl_package.sender
-			-> where weight between 5 and 10 ;
-				Query OK, 0 rows affected (0.06 sec)
+A4)    create view v4 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, r.client_name as recipient_name , s.client_name as sender_name
+	  from tbl_shipment
+	  JOIN tbl_package
+	  ON tbl_shipment.shipment_id = tbl_package.shipment_id
+	  JOIN tbl_client as r
+	  ON r.account_number = tbl_package.recipient 
+	  JOIN tbl_client as s
+	  ON s.account_number = tbl_package.recipient
+	  where weight between 5 and 10
 
-				MariaDB [examc0719320]> select * from v41;
-				+----------------+-----------------+
-				| Shipment_date  | sender_name     |
-				+----------------+-----------------+
-				| May , 11  3004 | Al Gore's Head  |
-				| NULL           | Al Gore's Head  |
-				| NULL           | Ogden Wernstrom |
-				+----------------+-----------------+
-       create view v42 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as recipient_name
-				-> from tbl_shipment
-				-> JOIN tbl_package
-				-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
-				-> JOIN tbl_client
-				-> ON tbl_client.account_number = tbl_package.recipient
-				-> where weight between 5 and 10
-				-> ;
-					Query OK, 0 rows affected (0.06 sec)
-
-					MariaDB [examc0719320]> select * from v42;
-					+----------------+----------------+
-					| Shipment_date  | recipient_name |
-					+----------------+----------------+
-					| May , 11  3004 | Barbados Slim  |
-					| NULL           | Barbados Slim  |
-					| NULL           | Leo Wong       |
-					+----------------+----------------+
+	+----------------------+----------------+---------------+
+	| Shipment_date        | recipient_name | sender_name   |
+	+----------------------+----------------+---------------+
+	| May , 11  3004       | Barbados Slim  | Barbados Slim |
+	| September , 18  2017 | Barbados Slim  | Barbados Slim |
+	| September , 18  2017 | Leo Wong       | Leo Wong      |
+	+----------------------+----------------+---------------+
+	
 Q5) Give details of those shipments which are currently processed at plant name "Mars" or "Amazonia"
 
 A5)    create view v5 as select * from tbl_shipment 
