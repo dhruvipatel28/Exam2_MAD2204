@@ -110,12 +110,442 @@ INSERT INTO Package VALUES(5, 1, 'Undeclared', 100.0, 5, 1);
 Create all select queries as VIEW Object and name it as v1...vn
 
 Q1) Display employess who name is "Turanga Leela" along with its shipment dertails.
+
+A1)  create view v1 as select * from tbl_shipment where manager IN
+     (
+      select employee_id from tbl_employee where name = 'Turanga Leela'
+     );
+     
+    +-------------+---------------+---------+----------+
+    | shipment_id | shipment_date | manager | location |
+    +-------------+---------------+---------+----------+
+    |           3 | NULL          |       2 |        3 |
+    |           4 | NULL          |       2 |        4 |
+    +-------------+---------------+---------+----------+
+    
 Q2) List those packages which are intented for client whose ids are 1,5 or 6
-Q3) Display name of emnployee and plant which are cleared
+
+A2 )  create view v2 as 
+      select * from tbl_package where recipient = 1 or recipient = 5 or recipient = 6;
+      
+      +-------------+----------------+------------+--------+--------+-----------+
+      | shipment_id | package_number | contents   | weight | sender | recipient |
+      +-------------+----------------+------------+--------+--------+-----------+
+      |           3 |              2 | Undeclared |      3 |      5 |         1 |
+      |           4 |              1 | Undeclared |      5 |      4 |         5 |
+      |           5 |              1 | Undeclared |    100 |      5 |         1 |
+      +-------------+----------------+------------+--------+--------+-----------+
+      
+      
+Q3)   Display name of emnployee and plant which are cleared
+
+A3 )   create view v3 as 
+
+        select tbl_employee.name , tbl_location.location from tbl_employee 
+				JOIN tbl_shipment 
+				ON tbl_employee.employee_id = tbl_shipment.manager 
+				JOIN tbl_location 
+				ON tbl_location.location_id = tbl_shipment.location 
+				where 
+				(
+					tbl_shipment.location IN ( select location from tbl_shipment where manager IN 
+						(
+						select sender from tbl_package where contents != 'Undeclared' UNION
+						select recipient from tbl_package where contents != 'Undeclared' 
+						) 
+					)
+				)	;
+        
+        
+ 				select * from v3;
+				+---------------+---------------+
+				| name          | location      |
+				+---------------+---------------+
+				| Hermes Conrad | Tarantulon VI |
+				+---------------+---------------+
+        
+        
 Q4) Display details of shipment data (Month, Day YYYY), sender and receiver name whose package weight is between 5 and 10
+
+A4)   create view v41 as
+		
+			create view v41 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as sender_name
+			-> from tbl_shipment
+			-> JOIN tbl_package
+			-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
+			-> JOIN tbl_client
+			-> ON tbl_client.account_number = tbl_package.sender
+			-> where weight between 5 and 10 ;
+				Query OK, 0 rows affected (0.06 sec)
+
+				MariaDB [examc0719320]> select * from v41;
+				+----------------+-----------------+
+				| Shipment_date  | sender_name     |
+				+----------------+-----------------+
+				| May , 11  3004 | Al Gore's Head  |
+				| NULL           | Al Gore's Head  |
+				| NULL           | Ogden Wernstrom |
+				+----------------+-----------------+
+       create view v42 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as recipient_name
+				-> from tbl_shipment
+				-> JOIN tbl_package
+				-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
+				-> JOIN tbl_client
+				-> ON tbl_client.account_number = tbl_package.recipient
+				-> where weight between 5 and 10
+				-> ;
+					Query OK, 0 rows affected (0.06 sec)
+
+					MariaDB [examc0719320]> select * from v42;
+					+----------------+----------------+
+					| Shipment_date  | recipient_name |
+					+----------------+----------------+
+					| May , 11  3004 | Barbados Slim  |
+					| NULL           | Barbados Slim  |
+					| NULL           | Leo Wong       |
+					+----------------+----------------+
 Q5) Give details of those shipments which are currently processed at plant name "Mars" or "Amazonia"
+
+A5)    create view v5 as select * from tbl_shipment 
+			where tbl_shipment.location IN (select location_id from tbl_location where location = 'Mars' or location = 'Amazonia');
+			select * from v5;
+			+-------------+---------------+---------+----------+
+			| shipment_id | shipment_date | manager | location |
+			+-------------+---------------+---------+----------+
+			|           3 | NULL          |       2 |        3 |
+			+-------------+---------------+---------+----------+
+      
 Q6) List client names whose pakages are "Undeclared"
+
+A6) create view v6 as 
+			 select client_name from tbl_client where account_number IN ( select recipient from tbl_package where contents = 'Undeclared' )
+			select * from v6;
+			+-----------------+
+			| client_name     |
+			+-----------------+
+			| Zapp Brannigan  |
+			| Al Gores Head   |
+			| Barbados Slim   |
+			| Ogden Wernstrom |
+			| Leo Wong        |
+			+-----------------+
+      
+      
 Q7) Display those employees details containing salary format as $2,700.00
+
+A7) 
+ create view v7 as
+    -> select employee_id , name , position , concat('$' , format(salary , '#,###,###.##')) as salary, remarks from tbl_employee ;
+
++-------------+--------------------------+--------------+---------+-------------------------------------------------------------------------+
+| employee_id | name                     | position     | salary  | remarks                                                                 |
++-------------+--------------------------+--------------+---------+-------------------------------------------------------------------------+
+|           1 | Phillip J. Fry           | Delivery boy | $7,500  | Not to be confused with the Philip J. Fry from Hovering Squid World 97a |
+|           2 | Turanga Leela            | Captain      | $10,000 | Remark given to this employee                                           |
+|           3 | Bender Bending Rodriguez | Robot        | $7,500  | Remark given to this employee                                           |
+|           4 | Hubert J. Farnsworth     | CEO          | $20,000 | Remark given to this employee                                           |
+|           5 | John A. Zoidberg         | Physician    | $25     | Remark given to this employee                                           |
+|           6 | Amy Wong                 | Intern       | $5,000  | Remark given to this employee                                           |
+|           7 | Hermes Conrad            | Bureaucrat   | $10,000 | Remark given to this employee                                           |
+|           8 | Scruffy Scruffington     | Janitor      | $5,000  | Remark given to this employee                                           |
++-------------+--------------------------+--------------+---------+-------------------------------------------------------------------------+
 Q8) Write query to Add remarks of those employee which are never remarked before.
+
+A8) create view v8 as 
+update tbl_employee set remarks = 'Remark given to this employee' where remarks is null;
+
++-------------+--------------------------+--------------+--------+-------------------------------------------------------------------------+
+| employee_id | name                     | position     | salary | remarks                                                                 |
++-------------+--------------------------+--------------+--------+-------------------------------------------------------------------------+
+|           1 | Phillip J. Fry           | Delivery boy |   7500 | Not to be confused with the Philip J. Fry from Hovering Squid World 97a |
+|           2 | Turanga Leela            | Captain      |  10000 | Remark given to this employee                                           |
+|           3 | Bender Bending Rodriguez | Robot        |   7500 | Remark given to this employee                                           |
+|           4 | Hubert J. Farnsworth     | CEO          |  20000 | Remark given to this employee                                           |
+|           5 | John A. Zoidberg         | Physician    |     25 | Remark given to this employee                                           |
+|           6 | Amy Wong                 | Intern       |   5000 | Remark given to this employee                                           |
+|           7 | Hermes Conrad            | Bureaucrat   |  10000 | Remark given to this employee                                           |
+|           8 | Scruffy Scruffington     | Janitor      |   5000 | Remark given to this employee                                           |
++-------------+--------------------------+--------------+--------+-------------------------------------------------------------------------+
 Q9) Display employee details in following format "Phillip J. Fry is Delivery boy and earns $7,500.00/month"
+
+A9) create view v9 as 
+ select concate (name , ' is ' , position , ' and earns $' , format(salary , '#`###`###.##' ) , '/month ' ) from tbl_employee;
+ comment  // im not able to concate formate function becouse the use of  ',' ;
+
+
 Q10) Update shipment date to current date for all data having NULL value
+A10) update tbl_shipment set shipment_date = curdate() where shipment_date is null;
+
+    +-------------+---------------+---------+----------+
+    | shipment_id | shipment_date | manager | location |
+    +-------------+---------------+---------+----------+
+    |           1 | 3004/05/11    |       1 |        1 |
+    |           2 | 3004/05/11    |       1 |        2 |
+    |           3 | 2017-09-18    |       2 |        3 |
+    |           4 | 2017-09-18    |       2 |        4 |
+    |           5 | 2017-09-18    |       7 |        5 |
+    +-------------+---------------+---------+----------+
+    
+    
+A1 )  create view v1 as select * from tbl_shipment where manager IN
+     (
+      select employee_id from tbl_employee where name = 'Turanga Leela'
+     );
+     
+    +-------------+---------------+---------+----------+
+    | shipment_id | shipment_date | manager | location |
+    +-------------+---------------+---------+----------+
+    |           3 | NULL          |       2 |        3 |
+    |           4 | NULL          |       2 |        4 |
+    +-------------+---------------+---------+----------+
+
+A2 )  create view v2 as 
+      select * from tbl_package where recipient = 1 or recipient = 5 or recipient = 6;
+      
+      +-------------+----------------+------------+--------+--------+-----------+
+      | shipment_id | package_number | contents   | weight | sender | recipient |
+      +-------------+----------------+------------+--------+--------+-----------+
+      |           3 |              2 | Undeclared |      3 |      5 |         1 |
+      |           4 |              1 | Undeclared |      5 |      4 |         5 |
+      |           5 |              1 | Undeclared |    100 |      5 |         1 |
+      +-------------+----------------+------------+--------+--------+-----------+
+
+A3 )   create view v3 as 
+
+        select tbl_employee.name , tbl_location.location from tbl_employee 
+				JOIN tbl_shipment 
+				ON tbl_employee.employee_id = tbl_shipment.manager 
+				JOIN tbl_location 
+				ON tbl_location.location_id = tbl_shipment.location 
+				where 
+				(
+					tbl_shipment.location IN ( select location from tbl_shipment where manager IN 
+						(
+						select sender from tbl_package where contents != 'Undeclared' UNION
+						select recipient from tbl_package where contents != 'Undeclared' 
+						) 
+					)
+				)	;
+        
+        
+ 				select * from v3;
+				+---------------+---------------+
+				| name          | location      |
+				+---------------+---------------+
+				| Hermes Conrad | Tarantulon VI |
+				+---------------+---------------+
+
+
+        step 1
+				select sender from tbl_package where contents != 'Undeclared' UNION
+				select recipient from tbl_package where contents != 'Undeclared' ;
+
+				step 2  (employee_id = 7 & 8 )
+				select employee_id,name from tbl_employee 
+				where employee_id IN 
+				(
+				select sender from tbl_package where contents != 'Undeclared' UNION
+				select recipient from tbl_package where contents != 'Undeclared' 
+				);
+
+				step 3 (location_id = 5)
+				select location from tbl_shipment 
+				where manager IN 
+				(
+				select sender from tbl_package where contents != 'Undeclared' UNION
+				select recipient from tbl_package where contents != 'Undeclared' 
+				);
+
+
+				step 4
+
+				select tbl_employee.name , tbl_location.location from tbl_employee 
+				JOIN tbl_shipment 
+				ON tbl_employee.employee_id = tbl_shipment.manager 
+				JOIN tbl_location 
+				ON tbl_location.location_id = tbl_shipment.location 
+				where 
+				(
+					tbl_shipment.location IN ( select location from tbl_shipment where manager IN 
+						(
+						select sender from tbl_package where contents != 'Undeclared' UNION
+						select recipient from tbl_package where contents != 'Undeclared' 
+						) 
+					)
+				)	;
+
+				+---------------+---------------+
+				| name          | location      |
+				+---------------+---------------+
+				| Hermes Conrad | Tarantulon VI |
+				+---------------+---------------+
+
+				
+A4)    create view v41 as
+		
+			create view v41 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as sender_name
+			-> from tbl_shipment
+			-> JOIN tbl_package
+			-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
+			-> JOIN tbl_client
+			-> ON tbl_client.account_number = tbl_package.sender
+			-> where weight between 5 and 10 ;
+				Query OK, 0 rows affected (0.06 sec)
+
+				MariaDB [examc0719320]> select * from v41;
+				+----------------+-----------------+
+				| Shipment_date  | sender_name     |
+				+----------------+-----------------+
+				| May , 11  3004 | Al Gore's Head  |
+				| NULL           | Al Gore's Head  |
+				| NULL           | Ogden Wernstrom |
+				+----------------+-----------------+
+       create view v42 as select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as recipient_name
+				-> from tbl_shipment
+				-> JOIN tbl_package
+				-> ON tbl_shipment.shipment_id = tbl_package.shipment_id
+				-> JOIN tbl_client
+				-> ON tbl_client.account_number = tbl_package.recipient
+				-> where weight between 5 and 10
+				-> ;
+					Query OK, 0 rows affected (0.06 sec)
+
+					MariaDB [examc0719320]> select * from v42;
+					+----------------+----------------+
+					| Shipment_date  | recipient_name |
+					+----------------+----------------+
+					| May , 11  3004 | Barbados Slim  |
+					| NULL           | Barbados Slim  |
+					| NULL           | Leo Wong       |
+					+----------------+----------------+
+		
+		step 1
+		select shipment_id from tbl_package where weight between 5 and 10;
+		+-------------+----------------+------------+--------+--------+-----------+
+		| shipment_id | package_number | contents   | weight | sender | recipient |
+		+-------------+----------------+------------+--------+--------+-----------+
+		|           2 |              1 | Undeclared |     10 |      2 |         3 |
+		|           3 |              3 | Undeclared |      7 |      2 |         3 |
+		|           4 |              1 | Undeclared |      5 |      4 |         5 |
+		+-------------+----------------+------------+--------+--------+-----------+
+		step 2 :
+		select shipment_id from tbl_package where weight between 5 and 10;
+		+-------------+
+		| shipment_id |
+		+-------------+
+		|           2 |
+		|           3 |
+		|           4 |
+		+-------------+
+		step 3
+		
+		select shipment_date, tbl_package.sender , tbl_package.recipient from tbl_shipment 
+		JOIN tbl_package 
+		ON tbl_shipment.shipment_id = tbl_package.shipment_id 
+		where weight between 5 and 10 
+		+---------------+--------+-----------+
+		| shipment_date | sender | recipient |
+		+---------------+--------+-----------+
+		| 3004/05/11    |      2 |         3 |
+		| NULL          |      2 |         3 |
+		| NULL          |      4 |         5 |
+		+---------------+--------+-----------+
+
+			
+		step 5 
+		select date_format('3004/05/11 ', '%M , %d  %Y');
+		+-------------------------------------------+
+		| date_format('3004/05/11 ', '%M , %d  %Y') |
+		+-------------------------------------------+
+		| May , 11  3004                            |
+		+-------------------------------------------+
+
+
+		step 6 
+			select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as sender_name
+			from tbl_shipment 
+			JOIN tbl_package 
+			ON tbl_shipment.shipment_id = tbl_package.shipment_id 
+			JOIN tbl_client 
+			ON tbl_client.account_number = tbl_package.sender 
+			where weight between 5 and 10 
+			+----------------+-----------------+
+			| Shipment_date  | sender_name     |
+			+----------------+-----------------+
+			| May , 11  3004 | Al Gore's Head  |
+			| NULL           | Al Gore's Head  |
+			| NULL           | Ogden Wernstrom |
+			+----------------+-----------------+
+
+			select date_format(shipment_date, '%M , %d  %Y') as Shipment_date, tbl_client.client_name as recipient_name
+			from tbl_shipment 
+			JOIN tbl_package 
+			ON tbl_shipment.shipment_id = tbl_package.shipment_id 
+			JOIN tbl_client 
+			ON tbl_client.account_number = tbl_package.recipient
+			where weight between 5 and 10 
+
+
+			+----------------+----------------+
+			| Shipment_date  | recipient_name |
+			+----------------+----------------+
+			| May , 11  3004 | Barbados Slim  |
+			| NULL           | Barbados Slim  |
+			| NULL           | Leo Wong       |
+			+----------------+----------------+
+		
+      
+A5 )   create view v5 as select * from tbl_shipment 
+			where tbl_shipment.location IN (select location_id from tbl_location where location = 'Mars' or location = 'Amazonia');
+			select * from v5;
+			+-------------+---------------+---------+----------+
+			| shipment_id | shipment_date | manager | location |
+			+-------------+---------------+---------+----------+
+			|           3 | NULL          |       2 |        3 |
+			+-------------+---------------+---------+----------+
+			
+			
+			step 1
+
+			select location_id from tbl_location where location = 'Mars' or location = 'Amazonia';
+			+-------------+
+			| location_id |
+			+-------------+
+			|           3 |
+			|           9 |
+			+-------------+
+
+			step 2
+			select * from tbl_shipment JOIN tbl_location 
+			ON tbl_shipment.location = tbl_location.location_id 
+			where tbl_location.location = 'Mars' or tbl_location.location = 'Amazonia'
+			+-------------+---------------+---------+----------+-------------+----------+----------------+
+			| shipment_id | shipment_date | manager | location | location_id | location | coordinates    |
+			+-------------+---------------+---------+----------+-------------+----------+----------------+
+			|           3 | NULL          |       2 |        3 |           3 | Mars     | 32435021.65468 |
+			+-------------+---------------+---------+----------+-------------+----------+----------------+
+
+			select * from tbl_shipment 
+			where tbl_shipment.location IN (select location_id from tbl_location where location = 'Mars' or location = 'Amazonia');
+			+-------------+---------------+---------+----------+
+			| shipment_id | shipment_date | manager | location |
+			+-------------+---------------+---------+----------+
+			|           3 | NULL          |       2 |        3 |
+			+-------------+---------------+---------+----------+
+      
+A6)		create view v6 as 
+			 select client_name from tbl_client where account_number IN ( select recipient from tbl_package where contents = 'Undeclared' )
+			select * from v6;
+			+-----------------+
+			| client_name     |
+			+-----------------+
+			| Zapp Brannigan  |
+			| Al Gores Head   |
+			| Barbados Slim   |
+			| Ogden Wernstrom |
+			| Leo Wong        |
+			+-----------------+
+
+
+
+
